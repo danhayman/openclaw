@@ -2,6 +2,7 @@ import {
   isAnthropicServerToolClearingEnabled,
   resolveCompactionReplayEligibility,
 } from "@openclaw/ai/transports";
+import { estimateBase64DecodedBytes } from "@openclaw/media-core/base64";
 import type { ModelCompatConfig } from "../../../config/types.models.js";
 import { generatedImageAssetFromBase64 } from "../../../image-generation/image-assets.js";
 import { formatErrorMessage } from "../../../infra/errors.js";
@@ -636,7 +637,7 @@ export async function prepareEmbeddedAttemptTransport(input: {
       baseStreamFn(model, context, {
         ...options,
         onGeneratedImage: async (base64) => {
-          if (Math.ceil((base64.length * 3) / 4) > maxBytes) {
+          if (estimateBase64DecodedBytes(base64) > maxBytes) {
             throw new Error("Generated image exceeds the configured media size limit");
           }
           const asset = generatedImageAssetFromBase64({
