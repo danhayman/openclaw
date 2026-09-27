@@ -724,7 +724,11 @@ export async function processResponsesStream<TApi extends Api>(
           const items = event.response.output ?? [];
           const completeToolCall =
             event.type === "response.completed" ? prepareTerminalToolCalls(items) : undefined;
-          await terminal.recoverTerminalOutput(items, completeToolCall, projectGeneratedImage);
+          await terminal.recoverTerminalOutput(
+            items,
+            completeToolCall,
+            options?.onGeneratedImage ? projectGeneratedImage : undefined,
+          );
         }
         terminalResponse = event.type === "response.completed" ? event.response : null;
         if (

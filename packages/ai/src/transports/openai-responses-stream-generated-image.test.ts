@@ -100,6 +100,37 @@ describe("native Responses image generation", () => {
     expect(extractAssistantVisibleText(message)).toBe("MEDIA:/tmp/recovered.png");
   });
 
+  it("keeps streamed text when an earlier terminal image has no handler", async () => {
+    const image = {
+      id: "ig_unhandled",
+      type: "image_generation_call",
+      status: "completed",
+      result: "aW1hZ2U=",
+    };
+    const text = {
+      id: "msg_after_image",
+      type: "message",
+      role: "assistant",
+      status: "completed",
+      phase: "final_answer",
+      content: [{ type: "output_text", text: "Still here", annotations: [] }],
+    };
+    const message = output();
+    await processResponsesStream(
+      events([
+        { type: "response.output_item.done", output_index: 1, item: text },
+        {
+          type: "response.completed",
+          response: { id: "resp_unhandled", status: "completed", output: [image, text] },
+        },
+      ]),
+      message,
+      { push: () => undefined },
+      model,
+    );
+    expect(extractAssistantVisibleText(message)).toBe("Still here");
+  });
+
   it("keeps an image alongside phased final text in provider order", async () => {
     const message = output();
     await processResponsesStream(
