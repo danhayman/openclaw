@@ -541,13 +541,13 @@ export async function processResponsesStream<TApi extends Api>(
         }
       } else if (event.type === "response.output_item.done") {
         const item = event.item;
-        await projectGeneratedImage(item, readResponsesOutputIndex(event));
         if (item.type !== "message") {
           lastTextBlock = null;
         }
 
         const existingOutputSlot = outputSlots.resolveOutputItem(event, item);
         materializeDeferredTextSlots(existingOutputSlot);
+        await projectGeneratedImage(item, readResponsesOutputIndex(event));
         const outputSlot = existingOutputSlot ?? createOutputSlot(event, item);
         compactionTracker.completed(item, blocks.length);
         if (item.type === "reasoning" && outputSlot?.type === "thinking") {

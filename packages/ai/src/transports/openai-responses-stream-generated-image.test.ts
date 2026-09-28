@@ -131,6 +131,67 @@ describe("native Responses image generation", () => {
     expect(extractAssistantVisibleText(message)).toBe("Still here");
   });
 
+  it("materializes deferred text before an image completed without an added event", async () => {
+    const first = {
+      id: "msg_before_deferred",
+      type: "message",
+      role: "assistant",
+      status: "completed",
+      phase: "final_answer",
+      content: [{ type: "output_text", text: "Hello", annotations: [] }],
+    };
+    const second = {
+      id: "msg_deferred",
+      type: "message",
+      role: "assistant",
+      status: "completed",
+      phase: "final_answer",
+      content: [{ type: "output_text", text: "Hello again", annotations: [] }],
+    };
+    const image = {
+      id: "ig_after_deferred",
+      type: "image_generation_call",
+      status: "completed",
+      result: "aW1hZ2U=",
+    };
+    const message = output();
+    await processResponsesStream(
+      events([
+        { type: "response.output_item.done", output_index: 0, item: first },
+        {
+          type: "response.output_item.added",
+          output_index: 1,
+          item: { ...second, status: "in_progress", content: [] },
+        },
+        {
+          type: "response.output_text.delta",
+          output_index: 1,
+          item_id: second.id,
+          delta: "Hello again",
+        },
+        { type: "response.output_item.done", output_index: 2, item: image },
+        { type: "response.output_item.done", output_index: 1, item: second },
+        {
+          type: "response.completed",
+          response: {
+            id: "resp_deferred_image",
+            status: "completed",
+            output: [first, second, image],
+          },
+        },
+      ]),
+      message,
+      { push: () => undefined },
+      model,
+      { onGeneratedImage: () => "/tmp/deferred.png" },
+    );
+    expect(message.content.map((block) => block.type === "text" && block.text)).toEqual([
+      "Hello",
+      "Hello again",
+      "MEDIA:/tmp/deferred.png",
+    ]);
+  });
+
   it("keeps an image alongside phased final text in provider order", async () => {
     const message = output();
     await processResponsesStream(
